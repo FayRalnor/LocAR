@@ -1,115 +1,44 @@
-const loadPlaces = function(coords) {
-    // COMMENT FOLLOWING LINE IF YOU WANT TO USE STATIC DATA AND ADD COORDINATES IN THE FOLLOWING 'PLACES' ARRAY
-    const method = 'api';
 
-    const PLACES = [
+window.onload = () => {
+     let places = staticLoadPlaces();
+     renderPlaces(places);
+};
+
+function staticLoadPlaces() {
+    return [
         {
-            name: "Your place name",
+            name: 'Ass1',
             location: {
-                lat: 0, // add here latitude if using static data
-                lng: 0, // add here longitude if using static data
+                lat: 3.257768,
+                lng: 101.549376,
 
+            name: 'Ass2',
+            location: {
+                lat: 3.257734,
+                lng: 101.549281,
             }
         },
     ];
+}
 
-    if (method === 'api') {
-        return loadPlaceFromAPIs(coords);
-    }
+function renderPlaces(places) {
+    let scene = document.querySelector('a-scene');
 
-    return Promise.resolve(PLACES);
-};
+    places.forEach((place) => {
+        let latitude = place.location.lat;
+        let longitude = place.location.lng;
 
-// getting places from REST APIs
-function loadPlaceFromAPIs(position) {
-    const params = {
-        radius: 300,    // search places not farther than this value (in meters)
-        clientId: 'HZIJGI4COHQ4AI45QXKCDFJWFJ1SFHYDFCCWKPIJDWHLVQVZ',
-        clientSecret: '',
-        version: '20300101',    // foursquare versioning, required but unuseful for this demo
-    };
+        let model = document.createElement('a-entity');
+        model.setAttribute('gps-entity-place', `latitude: ${latitude}; longitude: ${longitude};`);
+        model.setAttribute('gltf-model', './assets/magnemite/scene.gltf');
+        model.setAttribute('rotation', '0 180 0');
+        model.setAttribute('animation-mixer', '');
+        model.setAttribute('scale', '0.5 0.5 0.5');
 
-    // CORS Proxy to avoid CORS problems
-    const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+        model.addEventListener('loaded', () => {
+            window.dispatchEvent(new CustomEvent('gps-entity-place-loaded'))
+        });
 
-    // Foursquare API
-    const endpoint = `${corsProxy}https://api.foursquare.com/v2/venues/search?intent=checkin
-        &ll=${position.latitude},${position.longitude}
-        &radius=${params.radius}
-        &client_id=${params.clientId}
-        &client_secret=${params.clientSecret}
-        &limit=15
-        &v=${params.version}`;
-    return fetch(endpoint)
-        .then((res) => {
-            return res.json()
-                .then((resp) => {
-                    return resp.response.venues;
-                })
-        })
-        .catch((err) => {
-            console.error('Error with places API', err);
-        })
-};
-
-
-window.onload = () => {
-    const scene = document.querySelector('a-scene');
-
-    // first get current user location
-    return navigator.geolocation.getCurrentPosition(function (position) {
-
-        // then use it to load from remote APIs some places nearby
-        loadPlaces(position.coords)
-            .then((places) => {
-                places.forEach((place) => {
-                    const latitude = place.location.lat;
-                    const longitude = place.location.lng;
-
-                    // add place icon
-                    const icon = document.createElement('a-image');
-                    icon.setAttribute('gps-entity-place', `latitude: ${latitude}; longitude: ${longitude}`);
-                    icon.setAttribute('name', place.name);
-                    icon.setAttribute('src', '../assets/map-marker.png');
-
-                    // for debug purposes, just show in a bigger scale, otherwise I have to personally go on places...
-                    icon.setAttribute('scale', '20, 20');
-
-                    icon.addEventListener('loaded', () => window.dispatchEvent(new CustomEvent('gps-entity-place-loaded')));
-
-                    const clickListener = function(ev) {
-                        ev.stopPropagation();
-                        ev.preventDefault();
-
-                        const name = ev.target.getAttribute('name');
-
-                        const el = ev.detail.intersection && ev.detail.intersection.object.el;
-
-                        if (el && el === ev.target) {
-                            const label = document.createElement('span');
-                            const container = document.createElement('div');
-                            container.setAttribute('id', 'place-label');
-                            label.innerText = name;
-                            container.appendChild(label);
-                            document.body.appendChild(container);
-
-                            setTimeout(() => {
-                                container.parentElement.removeChild(container);
-                            }, 1500);
-                        }
-                    };
-
-                    icon.addEventListener('click', clickListener);
-                    
-                    scene.appendChild(icon);
-                });
-            })
-    },
-        (err) => console.error('Error in retrieving position', err),
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 27000,
-        }
-    );
-};
+        scene.appendChild(model);
+    });
+}
